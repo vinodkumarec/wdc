@@ -1,0 +1,603 @@
+EXP1
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <conio.h>
+
+void XOR(char *Message, char *Polynomial)
+{
+    for (int Index = 1; Index < strlen(Polynomial); Index++) // Zeroth XOR always results in 0
+        Message[Index] = (Message[Index] == Polynomial[Index]) ? '0' : '1';
+}
+
+void CRC(char *Message, char Polynomial[])
+{
+    while (strlen(Message) >= strlen(Polynomial))
+    {
+        if (Message[0] == '1')
+            XOR(Message, Polynomial);
+        strcpy(Message, Message + 1); // remove the first char from message
+    }
+}
+
+int main()
+{
+    // Setup
+    char Polynomial[] = "10110";
+    char Message[16];
+    printf("Enter the Message to be transmitted: ");
+    gets(Message);
+    printf("Generating polynomial: %s\n", Polynomial);
+
+    // Transmitter
+    char Residue[16];
+    CRC(strcat(strcpy(Residue, Message), "0000"), Polynomial);
+    printf("Generated check sum: %s\n", Residue);
+    printf("Transmitted message: %s\n", strcat(Message, Residue));
+
+    // Channel
+    printf("Do you want to introduce random bit-flips?(Y/n) ");
+    char Answer = getchar();
+    if (Answer == 'Y' || Answer == 'y')
+    {
+        int TotalBitFlips = (rand() % 5) + 1; // to prevent 0 condition
+        for (int i = 1; i <= TotalBitFlips; i++)
+        {
+            int BitIndex = rand() % 13; // 16 bits of data
+            Message[BitIndex] = Message[BitIndex] == '1' ? '0' : '1';
+        }
+    }
+
+    // Receiver
+    printf("Received message: %s\n", Message);
+    CRC(strcpy(Residue, Message), Polynomial);
+    if (!strcmp(Residue, "0000"))
+        printf("The received message is intact\n");
+    else
+        printf("The received message has been corrupted\n");
+    printf("Press a key to exit");
+    getch();
+    return 0;
+}
+
+
+
+
+
+
+// Bit stuffing and de-stuffing of a single frame of data
+
+#include <stdio.h>
+#include <conio.h>
+#include <string.h>
+
+char stuffedData[50] = {"01111110"}, deStuffedData[50], inputCharacter;
+int length = 8, count = 0;
+
+void stuffData()
+{
+    printf("\nEnter the Data:\n"); // Add data to the string after the preamble
+    while ((inputCharacter = getche()) != '\r')
+    {
+        if (inputCharacter == '1')
+            count++;
+        else
+            count = 0;
+        stuffedData[length++] = inputCharacter;
+        if (count == 5)
+        {
+            stuffedData[length++] = '0'; // Check if five consecutive 1's exist in the data and add a 0 after that
+            count = 0;
+        }
+    }
+    strcat(stuffedData, "01111110"); // Add the postamble
+    printf("\nBit Stuffed Stream:\n");
+    for (int i = 0; i < length + 8; i++)
+        printf("%c", stuffedData[i]);
+}
+
+void destuffData()
+{
+    count = 0;
+    printf("\nDe-Stuffed Stream:\n");
+    for (int j = 8, k = 0; j < length; j++)
+    {
+        if (stuffedData[j] == '1')
+            count++;
+        else
+            count = 0;
+        deStuffedData[k++] = stuffedData[j];
+        if (count == 5 && stuffedData[j + 1] == '0') // Remove the zero added after five 1's to get back the original data
+        {
+            j++;
+            count = 0;
+        }
+    }
+    for (int j = 0; j < length - 8; j++)
+        printf("%c", deStuffedData[j]);
+}
+
+void main()
+{
+    stuffData();
+    destuffData();
+    printf("Press a key to exit");
+    getch();
+}
+
+
+
+
+
+
+
+
+
+// Character stuffing and de-stuffing of a single frame of data
+
+#include <stdio.h>
+#include <string.h>
+#include <conio.h>
+
+#define DLE 16
+#define STX 2
+#define ETX 3
+
+char inputCharacter, stuffedData[50], deStuffedData[50];
+char Preamble[] = {DLE, STX}, Postamble[] = {DLE, ETX};
+int length = 2;
+
+void stuffData()
+{
+    printf("\nEnter the data stream:\n");
+    printf("CTRL+P -> DLE\nCTRL+B -> STX\nCTRL+C -> ETX\n");
+    strcat(stuffedData, Preamble);
+    while ((inputCharacter = getche()) != '\r')
+    {
+        if (inputCharacter == DLE)
+            stuffedData[length++] = DLE;
+        stuffedData[length++] = inputCharacter;
+    }
+    strcat(stuffedData, Postamble);
+    printf("\nCharacter Stuffed Stream:\n");
+    for (int i = 0; i < length + 2; i++)
+        printf("%c", stuffedData[i]);
+}
+
+void destuffData()
+{
+    printf("\nDe-Stuffed Stream:\n");
+    for (int j = 2, k = 0; j, k < length; j++, k++)
+    {
+        if (stuffedData[j] == DLE)
+            j++;
+        deStuffedData[k] = stuffedData[j];
+    }
+    for (int i = 0; i < length - 2; i++)
+        printf("%c", deStuffedData[i]);
+}
+
+void main()
+{
+    stuffData();
+    destuffData();
+    printf("Press a key to exit");
+    getch();
+}
+
+
+
+
+
+
+
+
+// Encryption and decryption of a text using Caesar Cipher
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#include <conio.h>
+
+char Message[50];
+int Shift;
+
+void encrypt()
+{
+    printf("Enter Encryption Key: ");
+    scanf("%d", &Shift);
+    abs(Shift%26);
+    for (int i = 0; i < strlen(Message); i++)
+        if (isalpha(Message[i]))
+            for (int j = 0; j < Shift; j++)
+            {
+                if (Message[i] == 'Z')
+                    Message[i] = 'A';
+                else
+                    Message[i]++;
+            }
+    printf("Scrambled text: %s\n", Message);
+}
+
+void decrypt()
+{
+    printf("Enter Decryption Key: ");
+    scanf("%d", &Shift);
+    abs(Shift%26);
+    for (int i = 0; i < strlen(Message); i++)
+        if (isalpha(Message[i]))
+            for (int j = 0; j < Shift; j++)
+            {
+                if (Message[i] == 'A')
+                    Message[i] = 'Z';
+                else
+                    Message[i]--;
+            }
+    printf("Decrypted Message: %s\n", Message);
+}
+
+void main()
+{
+    printf("Enter the Message: ");
+    strupr(gets(Message));
+    encrypt();
+    decrypt();
+    printf("Press a key to exit");
+    getch();
+}
+
+
+
+
+
+
+
+
+
+
+
+% Analysis of Log-distance path loss propagation model (w/ & w/o Shadow)
+clc
+close all;
+
+with_shadowing = input("w/ Shadowing? ");
+Fixed_Distance = input("Enter the reference distance: ");
+Arbitrary_Distance = 1000 : 1000 : 20000;
+% Values must be between 1.6 to 6
+Path_Loss_Exponent = rand(1,12)*(6-1.6) + 1.6;
+Frequency = randi([900, 4000], 1,12);
+Sigma = rand(1,12)*(15-3) + 3;
+X = zeros(1,12);
+
+for i = 1:12
+    Lambda(i) = 3e8 / (Frequency(i) * 10 ^ 6);
+    PL_D0(i) = -10 * log10((Lambda(i) ^ 2) / ((4 * pi * Fixed_Distance) ^ 2));
+    if(with_shadowing)
+        X(i) = Sigma(i) * randn(size(PL_D0(i)));
+    end
+end
+for i = 1:12
+    for j = 1:20
+        Path_Loss(i, j) = PL_D0(i) + 10 * Path_Loss_Exponent(i) * log10(Arbitrary_Distance(j) / Fixed_Distance)...
+            + X(i);
+    end
+end
+
+plot(Arbitrary_Distance, Path_Loss);
+legend("Retail Store", "Grocery Store", "Office Hard Partition", "Office Soft Partition", "Textile/Chemical",...
+    "Paper/Cereals", "Metal Working", "Indoor Street", "Textile/Chemical", "Metal Working");
+xlabel("Distance in m");
+ylabel("Path Loss in dB");
+title("Log-Distance Path Loss Indoor Propagation Model");
+grid on;
+
+
+
+
+
+
+% HATA Transmitter Height
+clc
+close all;
+Effective_Receiver_Height = input("Enter RX Height: ");
+Path_Distance = input("Enter the Distance between TX and RX: ");
+Frequency = input("Enter the Frequency: ");
+Effective_Transmitter_Height = 30:200;
+
+% Sub Urban Area
+Area_HRE_1 = (1.1 * log10(Frequency) - 0.7) * Effective_Receiver_Height - (1.56 * log10(Frequency) - 0.8);
+Medium_Path_Loss_1 = 69.55 + 26.16 * log10(Frequency) - 13.82 *...
+log10(Effective_Transmitter_Height) + (44.9 - 6.55 * log10(Effective_Transmitter_Height)) * log10(Path_Distance)...
+- Area_HRE_1;
+Medium_Path_Loss_1_dB = Medium_Path_Loss_1 - (2 * log10(Frequency / 28) * log10(Frequency / 28)) - 5.4;
+
+% Rural / Open Area
+Area_HRE_2 = (1.1 * log10(Frequency) - 0.7) * Effective_Receiver_Height - (1.56 * log10(Frequency) - 0.8);
+Medium_Path_Loss_2 = 69.55 + 26.16 * log10(Frequency) - 13.82 * log10(Effective_Transmitter_Height) + ...
+    (44.9 - 6.55 * log10(Effective_Transmitter_Height)) * log10(Path_Distance) - Area_HRE_2;
+Medium_Path_Loss_2_dB = Medium_Path_Loss_2 - (4.78 * log10(Frequency) * log10(Frequency)) ...
+    + 18.33 * log10(Frequency) - 40.98;
+
+% Large City Urban Area
+if Frequency < 3000000000
+    Area_HRE_3 = 8.29 * (log10(1.54 * Effective_Receiver_Height)) .* log10(1.54 * Effective_Receiver_Height)...
+        - 1.1;
+else
+    Area_HRE_3 = 3.2 * (log10(11.75 * Effective_Receiver_Height)) .* ...
+        (log10(11.75 * Effective_Receiver_Height)) - 4.97;
+end
+Medium_Path_Loss_3 = 69.55 + 26.16 * log10(Frequency) - 13.82 * log10(Effective_Transmitter_Height) + ...
+    (44.9 - 6.55 * log10(Effective_Transmitter_Height)) * log10(Path_Distance) - Area_HRE_3;
+Medium_Path_Loss_3_dB = Medium_Path_Loss_3 - (2 * log10(Frequency / 28) * log10(Frequency / 28)) - 5.4;
+
+figure
+plot(Effective_Transmitter_Height, Medium_Path_Loss_1_dB, 'r', Effective_Transmitter_Height, Medium_Path_Loss_2_dB, 'g', ...
+    Effective_Transmitter_Height, Medium_Path_Loss_3, 'b', Effective_Transmitter_Height, Medium_Path_Loss_3_dB, 'm');
+legend("L_5_0(dB)(Suburban Area - Medium City)", "L_5_0(dB)(Rural Area)", "L_5_0(dB)(Urban Area)",...
+    "L_5_0(dB)(Suburban Area - Large City)");
+xlabel("Distance in m");
+ylabel("Path Loss in dB");
+title("HATA Model - Transmitter Height Varied");
+grid on;
+
+
+
+
+
+
+
+
+
+% HATA Receiver Height
+clc
+close all;
+Effective_Transmitter_Height = input("Enter TX Height: ");
+Effective_Receiver_Height = 1:10;
+Path_Distance = input("Enter the Distance between TX and RX: ");
+Frequency = input("Enter the Frequency: ");
+
+% Sub Urban Area
+Area_HRE_1 = (1.1 * log10(Frequency) - 0.7) * Effective_Receiver_Height - (1.56 * log10(Frequency) - 0.8);
+Medium_Path_Loss_1 = 69.55 + 26.16 * log10(Frequency) - 13.82 *...
+log10(Effective_Transmitter_Height) + (44.9 - 6.55 * log10(Effective_Transmitter_Height)) * log10(Path_Distance)...
+- Area_HRE_1;
+Medium_Path_Loss_1_dB = Medium_Path_Loss_1 - (2 * log10(Frequency / 28) * log10(Frequency / 28)) - 5.4;
+
+% Rural / Open Area
+Area_HRE_2 = (1.1 * log10(Frequency) - 0.7) * Effective_Receiver_Height - (1.56 * log10(Frequency) - 0.8);
+Medium_Path_Loss_2 = 69.55 + 26.16 * log10(Frequency) - 13.82 * log10(Effective_Transmitter_Height) + ...
+    (44.9 - 6.55 * log10(Effective_Transmitter_Height)) * log10(Path_Distance) - Area_HRE_2;
+Medium_Path_Loss_2_dB = Medium_Path_Loss_2 - (4.78 * log10(Frequency) * log10(Frequency)) ...
+    + 18.33 * log10(Frequency) - 40.98;
+
+% Large City Urban Area
+if Frequency < 3000000000
+    Area_HRE_3 = 8.29 * (log10(1.54 * Effective_Receiver_Height)) .* log10(1.54 * Effective_Receiver_Height)...
+        - 1.1;
+else
+    Area_HRE_3 = 3.2 * (log10(11.75 * Effective_Receiver_Height)) .* ...
+        (log10(11.75 * Effective_Receiver_Height)) - 4.97;
+end
+Medium_Path_Loss_3 = 69.55 + 26.16 * log10(Frequency) - 13.82 * log10(Effective_Transmitter_Height) + ...
+    (44.9 - 6.55 * log10(Effective_Transmitter_Height)) * log10(Path_Distance) - Area_HRE_3;
+Medium_Path_Loss_3_dB = Medium_Path_Loss_3 - (2 * log10(Frequency / 28) * log10(Frequency / 28)) - 5.4;
+
+figure
+plot(Effective_Receiver_Height, Medium_Path_Loss_1_dB, 'r', Effective_Receiver_Height, Medium_Path_Loss_2_dB, 'g', ...
+    Effective_Receiver_Height, Medium_Path_Loss_3, 'b', Effective_Receiver_Height, Medium_Path_Loss_3_dB, 'm');
+legend("L_5_0(dB)(Suburban Area - Medium City)", "L_5_0(dB)(Rural Area)", "L_5_0(dB)(Urban Area)",...
+    "L_5_0(dB)(Suburban Area - Large City)");
+xlabel("Distance in m");
+ylabel("Path Loss in dB");
+title("HATA Model - Receiver Height Varied");
+grid on;
+
+
+
+
+
+
+
+
+
+
+
+% HATA Model Distance
+clc
+close all;
+Effective_Transmitter_Height = input("Enter TX Height: ");
+Effective_Receiver_Height = input("Enter RX Height: ");
+Path_Distance = 1000:1000:20000;
+Frequency = input("Enter the Frequency: ");
+
+% Sub Urban Area
+Area_HRE_1 = (1.1 * log10(Frequency) - 0.7) * Effective_Receiver_Height - (1.56 * log10(Frequency) - 0.8);
+Medium_Path_Loss_1 = 69.55 + 26.16 * log10(Frequency) - 13.82 *...
+log10(Effective_Transmitter_Height) + (44.9 - 6.55 * log10(Effective_Transmitter_Height)) * log10(Path_Distance)...
+- Area_HRE_1;
+Medium_Path_Loss_1_dB = Medium_Path_Loss_1 - (2 * log10(Frequency / 28) * log10(Frequency / 28)) - 5.4;
+
+% Rural / Open Area
+Area_HRE_2 = (1.1 * log10(Frequency) - 0.7) * Effective_Receiver_Height - (1.56 * log10(Frequency) - 0.8);
+Medium_Path_Loss_2 = 69.55 + 26.16 * log10(Frequency) - 13.82 * log10(Effective_Transmitter_Height) + ...
+    (44.9 - 6.55 * log10(Effective_Transmitter_Height)) * log10(Path_Distance) - Area_HRE_2;
+Medium_Path_Loss_2_dB = Medium_Path_Loss_2 - (4.78 * log10(Frequency) * log10(Frequency)) ...
+    + 18.33 * log10(Frequency) - 40.98;
+
+% Large City Urban Area
+if Frequency < 3e9
+    Area_HRE_3 = 8.29 * (log10(1.54 * Effective_Receiver_Height)) * log10(1.54 * Effective_Receiver_Height)...
+        - 1.1;
+else
+    Area_HRE_3 = 3.2 * (log10(11.75 * Effective_Receiver_Height)) * ...
+        (log10(11.75 * Effective_Receiver_Height)) - 4.97;
+end
+Medium_Path_Loss_3 = 69.55 + 26.16 * log10(Frequency) - 13.82 * log10(Effective_Transmitter_Height) + ...
+    (44.9 - 6.55 * log10(Effective_Transmitter_Height)) * log10(Path_Distance) - Area_HRE_3;
+Medium_Path_Loss_3_dB = Medium_Path_Loss_3 - (2 * log10(Frequency / 28) * log10(Frequency / 28)) - 5.4;
+
+figure
+plot(Path_Distance, Medium_Path_Loss_1_dB, 'r', Path_Distance, Medium_Path_Loss_2_dB, 'g', ...
+    Path_Distance, Medium_Path_Loss_3, 'b', Path_Distance, Medium_Path_Loss_3_dB, 'm');
+legend("L_5_0(dB)(Suburban Area - Medium City)", "L_5_0(dB)(Rural Area)", "L_5_0(dB)(Urban Area)",...
+    "L_5_0(dB)(Suburban Area - Large City)");
+xlabel("Distance in m");
+ylabel("Path Loss in dB");
+title("HATA Model - Distance Varied");
+grid on;
+
+
+
+
+% CDMA Technique
+clc
+clear;
+close all;
+BitStream = input("Enter 4 bits of data: ");
+XRange = [1 5];
+YRange = [-4 4];
+
+% Creating the Walsh Table
+Walsh = 1;
+for i = 1:2
+    Walsh = [Walsh, Walsh; Walsh, -Walsh];
+end
+
+Multiplexed_Data = zeros(1, 4);
+Encrypted_Walsh_Table = zeros(4, 4);
+
+for row = 1:4
+    for col = 1:4
+        Encrypted_Walsh_Table(row, col) = BitStream(row) * Walsh(row, col);
+        Multiplexed_Data(col) = Multiplexed_Data(col) + Encrypted_Walsh_Table(row, col);
+    end
+end
+
+figure;
+for Number = 1:4
+    subplot(4, 4, Number);
+    stairs(Encrypted_Walsh_Table(Number, :));
+    title(sprintf("Station %d Code", Number));
+    xlim(XRange);
+    ylim(YRange);
+    grid();
+end
+
+subplot(4, 4, 5:8);
+stairs(Multiplexed_Data);
+title("Multiplexed Channnel Data");
+xlim(XRange)
+ylim(YRange)
+grid();
+
+Demultiplexed_Data = zeros(1, 4);
+Decrypted_Walsh_Table = zeros(4, 4);
+
+for row = 1:4
+    for col = 1:4
+        Decrypted_Walsh_Table(row, col) = Multiplexed_Data(col) * Walsh(row, col);
+        Demultiplexed_Data(row) = Demultiplexed_Data(row) + Multiplexed_Data(col) * Walsh(row, col);
+    end
+end
+Demultiplexed_Data = Demultiplexed_Data / 4;
+
+for Number = 1:4
+    subplot(4, 4, Number+8);
+    stairs(Decrypted_Walsh_Table(Number, :));
+    title(sprintf("Inner Product %d", Number));
+    xlim(XRange);
+    ylim(YRange);
+    grid();
+end
+
+subplot(4, 4, 13:16);
+stairs(Demultiplexed_Data);
+title("Demultiplexed Channnel Data");
+xlim(XRange);
+ylim(YRange);
+grid();
+
+
+
+exp8
+
+clc;
+close all;
+m=10^5;
+snr_db=0:1:20;
+for j=1:1:length(snr_db)
+    n_err=0;
+    n_bits=0;
+    while n_err<100
+        inf_bit=round(rand(1,m));
+        x=-2*(inf_bit-0.5);
+        N0=1/10^(snr_db(j)/10);
+        n1=sqrt(N0/2)*abs(randn(1,length(x))+j*randn(1,length(x)));
+        h1=1/sqrt(2)*abs(randn(1,length(x))+j*randn(1,length(x)));
+        y=h1.*x+n1;
+        y=y./h1;
+        est_bits=y<0;
+        diff=inf_bit-est_bits;
+        n_err=n_err+abs(sum(diff));
+        n_bits=n_bits+length(inf_bit);
+    end
+    BER(j)=n_err/n_bits;
+end
+
+snr=10.^(snr_db/10);
+
+theber=0.5.*(1-sqrt(snr./(snr+1)));
+theberAW=0.5*erfc(sqrt(10.^(snr_db)/10));
+
+
+semilogy(snr_db,theber,'blad-','LineWidth',2);
+hold on;
+
+semilogy(snr_db,BER,'or','LineWidth',2);
+hold on;
+
+semilogy(snr_db,theberAW,'-','LineWidth',2);
+hold on;
+
+
+
+
+
+
+exp10
+
+
+clc;
+close all;
+m=10^5;
+snr_db=0:1:20;
+for j=1:1:length(snr_db)
+    n_err=0;
+    n_bits=0;
+    while n_err<100
+        inf_bit=round(rand(1,m));
+        x=-2*(inf_bit-0.5);
+        N0=1/10^(snr_db(j)/10);
+        n1=sqrt(N0/2)*abs(randn(1,length(x))+j*randn(1,length(x)));
+        h1=1/sqrt(2)*abs(randn(1,length(x))+j*randn(1,length(x)));
+        n2=sqrt(N0/2)*abs(randn(1,length(x))+j*randn(1,length(x)));
+        h2=1/sqrt(2)*abs(randn(1,length(x))+j*randn(1,length(x)));
+        y1=h1.*x+n1;
+        y2=h2.*x+n2;
+        y=(y1+y2)/2;
+        est_bits=y<0;
+        diff=inf_bit-est_bits;
+        n_err=n_err+abs(sum(diff));
+        n_bits=n_bits+length(inf_bit);
+    end
+    BER(j)=n_err/n_bits;
+end
+
+
+semilogy(snr_db,BER,'or','LineWidth',2);
+hold on;
+
+
+
+
